@@ -18,12 +18,12 @@ app.post("/api/interview", async (req, res) => {
     if (!question) {
         return res.json({
             feedback: "",
-            newQuestion: "Tell me about a time you worked on a team project.",
+            newQuestion: "What role are you interviewing for?",
         });
     }
 
     const prompt = `
-        You are a friendly behavioral interviewer.
+        You are a behavioral interviewer.
 
         The user just gave an answer to the question:
         "${question}"
@@ -34,7 +34,8 @@ app.post("/api/interview", async (req, res) => {
         Your job:
         1. Give constructive, interviewer-style feedback.
         2. Ask a NEW behavioral interview question (one the interviewer would naturally ask in an interview).
-        3. Respond strictly in this JSON format:
+        3. Adapt to questions, keep knowledge of them and answers, also remember what type of role the interview is for in order to give relevant questions.
+        4. Respond strictly in this JSON format:
 
         {
         "feedback": "Your constructive feedback goes here.",
