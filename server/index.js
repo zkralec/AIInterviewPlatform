@@ -5,7 +5,7 @@ const { OpenAI } = require("openai");
 
 dotenv.config();
 const app = express();
-const PORT = 5000;
+const PORT = 5001;
 
 app.use(cors());
 app.use(express.json());
@@ -13,51 +13,69 @@ app.use(express.json());
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 app.post("/api/interview", async (req, res) => {
-  const { question, answer } = req.body;
+    const { question, answer } = req.body;
 
-  if (!question) {
-    return res.json({
-      feedback: "",
-      newQuestion: "Tell me about a time you worked on a team project.",
-    });
-  }
+    if (!question) {
+        return res.json({
+            feedback: "",
+            newQuestion: "Tell me about a time you worked on a team project.",
+        });
+    }
 
-  const prompt = `
-You are a friendly behavioral interviewer.
+    const prompt = `
+        You are a friendly behavioral interviewer.
 
-User's question: "${question}"
-User's answer: "${answer}"
+        The user just gave an answer to the question:
+        "${question}"
 
-Give constructive feedback on the answer. Then ask a new behavioral interview question.
+        Their answer was:
+        "${answer}"
 
-Format the response as JSON with "feedback" and "newQuestion" fields.
-`;
+        Your job:
+        1. Give constructive, interviewer-style feedback.
+        2. Ask a NEW behavioral interview question (one the interviewer would naturally ask in an interview).
+        3. Respond strictly in this JSON format:
+
+        {
+        "feedback": "Your constructive feedback goes here.",
+        "newQuestion": "Your next interviewer-style question goes here."
+        }
+
+        Example:
+        {
+        "feedback": "That was a solid example highlighting teamwork. You can make it stronger by focusing more on the result you achieved.",
+        "newQuestion": "Can you tell me about a time when you had to resolve a conflict within a team?"
+        }
+        `;
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [{ role: "user", content: prompt }],
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
     });
 
-    const content = completion.choices[0].message.content;
+    const content = completion.choices[0]?.message?.content || "";
+
+    const cleanContent = content.trim()
+        .replace(/^```json\s*/, "") // Removes starting ```json
+        .replace(/\s*```$/, "");    // Removes trailing ```
+
     let parsed;
     try {
-      parsed = JSON.parse(content);
+        parsed = JSON.parse(cleanContent);
     } catch {
-      const feedback = content.split("New question:")[0].trim();
-      const newQuestion =
-        content.split("New question:")[1]?.trim() ||
-        "Tell me about a challenge you faced.";
-      parsed = { feedback, newQuestion };
+        const feedback = cleanContent.split("New question:")[0]?.trim();
+        const newQuestion = cleanContent.split("New question:")[1]?.trim() || "Tell me about a challenge you faced.";
+        parsed = { feedback, newQuestion };
     }
 
     res.json(parsed);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Server error" });
+        console.error(err);
+        res.status(500).json({ error: "Server error" });
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server listening on http://localhost:${PORT}`);
+app.listen(PORT, '127.0.0.1', () => {
+    console.log(`✅ Server listening on http://127.0.0.1:${PORT}`);
 });
