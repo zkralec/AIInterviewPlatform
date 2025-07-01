@@ -64,6 +64,7 @@ textarea {
   color: #f5f5f5;
   min-height: 12rem;
   width: 100%;
+  padding-right: 3rem;
 }
 
 textarea:focus {
@@ -165,4 +166,60 @@ button:hover {
   to {
     transform: translateY(-50%) rotate(360deg);
   }
+}
+
+.textarea-container {
+  position: relative;
+}
+
+.mic-button:hover {
+  color: #777;
+}
+
+.mic-button.recording {
+  color: #ff5555;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.textarea-container {
+  position: relative;
+}
+
+.textarea-container textarea {
+  display: block;
+  width: 100%;
+  resize: none;
+  font-size: 1.125rem;
+  padding: 1rem;
+  padding-right: 3rem; /* Space for icon */
+}
+
+.textarea-container .mic-button {
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.2rem;
+  font-size: 1.25rem;
+  background: none;
+  border: none;
+  color: #f5f5f5;
+  cursor: pointer;
+}
+
+.textarea-container .mic-button:hover {
+  color: #777;
 }

@@ -12,71 +12,134 @@ app.use(express.json());
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+// Route 1: Main Interview Route
 app.post("/api/interview", async (req, res) => {
-    const { question, answer } = req.body;
+  const { question, answer, userRole, topicsAsked } = req.body;
 
-    if (!question) {
-        return res.json({
-            feedback: "",
-            newQuestion: "What role are you interviewing for?",
-        });
+  console.log("\n---------------------------------");
+  console.log("User Role:", userRole);
+  console.log("Topics Asked:", topicsAsked);
+  console.log("---------------------------------\n");
+
+  if (!question) {
+    return res.json({
+      feedback: "",
+      newQuestion: "What role are you interviewing for?",
+    });
+  }
+
+  const topicsList = Array.isArray(topicsAsked) && topicsAsked.length > 0
+    ? topicsAsked.join(", ")
+    : "None";
+
+  const prompt = `
+    You are a behavioral interviewer for a ${userRole}.
+    The user just gave an answer to the question:
+    "${question}"
+
+    Their answer was:
+    "${answer}"
+
+    Topics already covered:
+    ${topicsList}
+
+    Your job:
+    1. Give constructive, interviewer-style feedback.
+    2. Ask a NEW behavioral interview question that is relevant to the role of ${userRole}.
+    3. Do NOT repeat topics listed in the "Topics already covered".
+    4. Choose questions that naturally flow from a behavioral interviewer, focusing on areas ${userRole}s are evaluated on.
+    5. Respond strictly in this JSON format:
+
+    {
+      "feedback": "Your constructive feedback goes here.",
+      "newQuestion": "Your next interviewer-style question goes here."
     }
-
-    const prompt = `
-        You are a behavioral interviewer.
-
-        The user just gave an answer to the question:
-        "${question}"
-
-        Their answer was:
-        "${answer}"
-
-        Your job:
-        1. Give constructive, interviewer-style feedback.
-        2. Ask a NEW behavioral interview question (one the interviewer would naturally ask in an interview).
-        3. Adapt to questions, keep knowledge of them and answers, also remember what type of role the interview is for in order to give relevant questions.
-        4. Respond strictly in this JSON format:
-
-        {
-        "feedback": "Your constructive feedback goes here.",
-        "newQuestion": "Your next interviewer-style question goes here."
-        }
-
-        Example:
-        {
-        "feedback": "That was a solid example highlighting teamwork. You can make it stronger by focusing more on the result you achieved.",
-        "newQuestion": "Can you tell me about a time when you had to resolve a conflict within a team?"
-        }
-        `;
+  `;
 
   try {
     const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: prompt }],
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }]
     });
-
-    const content = completion.choices[0]?.message?.content || "";
-
+    const content = completion.choices[0]?.message?.content || ""; 
     const cleanContent = content.trim()
-        .replace(/^```json\s*/, "") // Removes starting ```json
-        .replace(/\s*```$/, "");    // Removes trailing ```
+      .replace(/^```json\s*/, "")
+      .replace(/\s*```$/, ""); 
 
     let parsed;
     try {
-        parsed = JSON.parse(cleanContent);
+      parsed = JSON.parse(cleanContent);
     } catch {
-        const feedback = cleanContent.split("New question:")[0]?.trim();
-        const newQuestion = cleanContent.split("New question:")[1]?.trim() || "Tell me about a challenge you faced.";
-        parsed = { feedback, newQuestion };
+      const feedback = cleanContent.split("New question:")[0]?.trim();
+      const newQuestion = cleanContent.split("New question:")[1]?.trim() || "Tell me about a challenge you faced.";
+      parsed = { feedback, newQuestion };
     }
 
     res.json(parsed);
   } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Server error" });
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Route 2: Extract Role
+app.post("/api/extract-role", async (req, res) => {
+  const { userInput } = req.body;
+
+  const prompt = `
+    The user gave the following answer about the role they're interviewing for:
+    "${userInput}"
+
+    Extract and return only the job role in plain text (without company names or extra words).
+    If it's unclear, respond with "unknown".
+  `;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }]
+    });
+    const role = completion.choices[0]?.message?.content.trim();
+    res.json({ role });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Error extracting role" });
+  }
+});
+
+// Route 3: Extract Topics
+app.post("/api/extract-topics", async (req, res) => {
+  const { conversation } = req.body;
+
+  const prompt = `
+    You are an expert interviewer assistant.
+    The conversation is:
+
+    ${conversation}
+
+    List any NEW behavioral topics that appeared in the LAST answer only.
+    Do NOT list any topics that were discussed earlier.
+    Output STRICTLY in this JSON format:
+    {
+      "topics": ["newTopic1", "newTopic2"]
+    }
+    If no new topics appeared, return an empty array for "topics".
+  `;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }]
+    });
+    const content = completion.choices[0]?.message?.content.trim();
+    const parsed = JSON.parse(content);
+    res.json(parsed);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Error extracting topics" });
   }
 });
 
 app.listen(PORT, '127.0.0.1', () => {
-    console.log(`✅ Server listening on http://127.0.0.1:${PORT}`);
+  console.log(`✅ Server listening on http://127.0.0.1:${PORT}`);
 });
