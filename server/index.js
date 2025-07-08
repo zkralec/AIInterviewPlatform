@@ -12,7 +12,7 @@ app.use(express.json());
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// Route 1: Main Interview Route
+// Main Interview Route
 app.post("/api/interview", async (req, res) => {
   const { question, answer, userRole, topicsAsked } = req.body;
 
@@ -82,7 +82,7 @@ app.post("/api/interview", async (req, res) => {
   }
 });
 
-// Route 2: Extract Role
+// Extract Role
 app.post("/api/extract-role", async (req, res) => {
   const { userInput } = req.body;
 
@@ -107,7 +107,7 @@ app.post("/api/extract-role", async (req, res) => {
   }
 });
 
-// Route 3: Extract Topics
+// Extract Topics
 app.post("/api/extract-topics", async (req, res) => {
   const { conversation } = req.body;
 
@@ -140,6 +140,7 @@ app.post("/api/extract-topics", async (req, res) => {
   }
 });
 
+// Lets user know if working
 app.listen(PORT, '127.0.0.1', () => {
   console.log(`✅ Server listening on http://127.0.0.1:${PORT}`);
 });

@@ -1,5 +1,4 @@
-import { useState, useRef } from "react";
-import { FaMicrophone } from "react-icons/fa";
+import { useState } from "react";
 
 const initialQuestion = "What role are you interviewing for?";
 
@@ -11,47 +10,6 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [userRole, setUserRole] = useState("");
   const [topicsAsked, setTopicsAsked] = useState([]);
-  const recognitionRef = useRef(null);
-  const [isRecording, setIsRecording] = useState(false);
-
-  function toggleListening() {
-    if (isRecording) {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-      setIsRecording(false);
-      return;
-    }
-
-    if (!("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)) {
-      alert("Your browser does not support speech recognition.");
-      return;
-    }
-
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.lang = "en-US";
-
-    recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      setAnswer((prev) => prev + " " + transcript);
-    };
-
-    recognition.onerror = (event) => {
-      console.error("Speech recognition error:", event.error);
-      alert("Error with speech recognition. Try again.");
-    };
-
-    recognition.onend = () => {
-      setIsRecording(false);
-    };
-    
-    recognition.start();
-    recognitionRef.current = recognition;
-    setIsRecording(true);
-  }
 
   async function submitAnswer() {
     if (!answer.trim()) {
@@ -62,7 +20,7 @@ export default function App() {
     setLoading(true);
 
     try {
-      // STEP 1: Extract Role
+      // Extract Role
       if (question.includes("What role are you interviewing for")) {
         const roleRes = await fetch("/api/extract-role", {
           method: "POST",
@@ -74,7 +32,7 @@ export default function App() {
         setUserRole(roleData.role);
 
       } else {
-        // STEP 2: Extract Topics
+        // Extract Topics
         const conversation = history
           .map((item) => `Q: ${item.question}\nA: ${item.answer}`)
           .join("\n");
@@ -91,7 +49,7 @@ export default function App() {
         setTopicsAsked((prev) => [...prev, ...newTopics]);
       }
 
-      // STEP 3: Get New Question
+      // Get New Question
       const res = await fetch("/api/interview", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -105,7 +63,7 @@ export default function App() {
       
       const data = await res.json();
 
-      // STEP 4: Update State
+      // Update State
       setHistory([...history, { question, answer, feedback: data.feedback }]);
       setFeedback(data.feedback);
       setAnswer("");
@@ -135,13 +93,6 @@ export default function App() {
               value={answer}
               onChange={(e) => setAnswer(e.target.value)}
             />
-            <button
-              className={`mic-button ${isRecording ? "recording" : ""}`}
-              onClick={toggleListening}
-              title={isRecording ? "Stop recording" : "Record your answer"}
-            >
-              <FaMicrophone />
-            </button>
           </div>
 
           <div className="submit-button-container">
